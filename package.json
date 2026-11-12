@@ -1,6 +1,6 @@
 {
-  "name": "acode-plugin-modded",
-  "version": "1.0.0",
+  "name": "acode-plugin-cpp",
+  "version": "2.1.1",
   "description": "Debug with color , build with compressed",
   "main": "dist/main.js",
   "scripts": {

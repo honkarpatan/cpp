@@ -87,28 +87,41 @@ function triggerDebouncedLint(source) {
     clearTimeout(lintTimeout);
     if (!currentFile || !/\.(c|cpp|cxx|cc|h|hpp)$/i.test(currentFile.filename)) return;
 
+    // Autocomplete needs faster refresh than pure typing debounce
+    const delay = source === 'CM6 docChanged' ? 280 : 600;
+
     lintTimeout = setTimeout(async () => {
         if (!currentFile || currentFile !== editorManager.activeFile) return;
         const settings = getSettings();
-        
-        if (settings.enableLinter === 'disable') return; 
+        if (settings.enableLinter === 'disable') return;
 
         const editor = editorManager.editor;
         if (!editor) return;
-        
+
         const isCM6 = typeof editor.dispatch === 'function';
         if (isCM6 && !editor.state) return;
         if (!isCM6 && !currentSession) return;
-        
+
         const currentCode = isCM6 ? editor.state.doc.toString() : currentSession.getValue();
         if (currentCode === lastLintedCode) return;
 
         const ok = await ensureCDeps();
-        if (ok && currentFile === editorManager.activeFile) {
-            lastLintedCode = currentCode; 
-            await runLinter(currentSession, currentFile); 
+        if (!ok || currentFile !== editorManager.activeFile) return;
+
+        const codeToLint = isCM6 ? editor.state.doc.toString() : currentSession.getValue();
+        await runLinter(currentSession, currentFile);
+
+        const after = isCM6
+          ? (editorManager.editor?.state?.doc?.toString?.() ?? '')
+          : (currentSession?.getValue?.() ?? '');
+        if (after === codeToLint) {
+          lastLintedCode = codeToLint;
+        } else {
+          // Buffer changed during lint (completion applied) — force another pass
+          lastLintedCode = '';
+          triggerDebouncedLint('post-lint-dirty');
         }
-    }, 1000); 
+    }, delay);
 }
 
 const onEditorChangeText = (sourceEvent) => {
@@ -163,6 +176,33 @@ function attachEditorChangeListener() {
         document.addEventListener('keyup', cm6GlobalListeners.keyup, { capture: true });
         document.addEventListener('click', cm6GlobalListeners.click, { capture: true });
         if (typeof editor.on === 'function') editor.on('change', () => onEditorChangeText('CM6 Native Change'));
+
+        // CRITICAL: autocomplete / snippet apply use CM6 transactions — they do NOT
+        // fire DOM input/keyup. Without updateListener, diagnostics stay stale
+        // (e.g. "#in" error remains after completing to "#include").
+        try {
+          const cmView = acode.require('@codemirror/view');
+          const cmState = acode.require('@codemirror/state');
+          if (cmView?.EditorView?.updateListener && cmState?.Compartment && !cm6UpdateAttached) {
+            if (!cm6UpdateCompartment) cm6UpdateCompartment = new cmState.Compartment();
+            const listener = cmView.EditorView.updateListener.of((update) => {
+              if (!update.docChanged) return;
+              onEditorChangeText('CM6 docChanged');
+            });
+            const existing = cm6UpdateCompartment.get(editor.state);
+            if (existing === undefined) {
+              editor.dispatch({
+                effects: cmState.StateEffect.appendConfig.of(cm6UpdateCompartment.of(listener)),
+              });
+            } else {
+              editor.dispatch({ effects: cm6UpdateCompartment.reconfigure(listener) });
+            }
+            cm6UpdateAttached = true;
+            console.log('[Init] CM6 updateListener attached for lint refresh');
+          }
+        } catch (e) {
+          console.warn('[Init] CM6 updateListener failed', e);
+        }
     } else {
         editor.on('change', () => onEditorChangeText('Ace Native Change'));
         editor.on('changeSelection', () => {
