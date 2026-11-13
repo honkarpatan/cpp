@@ -119,12 +119,10 @@ async function handleAction(id) {
   }
   if (id === 'deps') {
     try {
-      const { openDepsPicker } = await import('./depsPicker.js');
-      if (typeof openDepsPicker === 'function') await openDepsPicker();
-      else {
-        const { ensureCDeps } = await import('./dependencyChecker.js');
-        await ensureCDeps({ force: true });
-      }
+      // depsPicker.openDepsPicker() needs scan data (opts.items); the checker scans
+      // first and then fills the picker, so go through it.
+      const { checkDependenciesAction } = await import('./dependencyChecker.js');
+      await checkDependenciesAction();
     } catch (e) {
       toast('Deps: ' + (e?.message || e), 2000);
     }
