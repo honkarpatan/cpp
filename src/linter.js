@@ -6,6 +6,7 @@ import { prepareProject, toBase64, shellEscape } from './virtualWorkspace.js';
 import { ensureCDeps } from './dependencyChecker.js';
 import { getSettings } from './settings.js';
 import { updateLogMap, clearAllLogs } from './inlineDisplay.js';
+import { detectLibraries, buildFlagsGroup, missingHeaderHint } from './libraries/catalog.js';
 import { setFileProblems, clearFileProblems } from './problemsStore.js';
 
 let lintInProgress = false;
@@ -29,8 +30,12 @@ async function lintInOneShot(projectDir, fileContents, mainFileName, isCpp) {
     parts.push(`echo '${b64}' | base64 -d > '${shellEscape(name)}'`);
   }
 
+  // headers of installed libraries (e.g. -I/usr/include/SDL2) found via #includes
+  const detected = detectLibraries(Object.values(fileContents), { localFiles: Object.keys(fileContents) });
+  if (detected.length) parts.push(buildFlagsGroup(detected));
+
   parts.push(
-    `${compiler} ${stdFlag} -fsyntax-only -Wall -Wextra '${shellEscape(mainFileName)}' 2>&1 || true`
+    `${compiler} ${stdFlag} -fsyntax-only -Wall -Wextra ${detected.length ? '$LIB_CFLAGS ' : ''}'${shellEscape(mainFileName)}' 2>&1 || true`
   );
 
   const snippet = parts.join(' && ');
@@ -80,7 +85,7 @@ function parseCompilerErrors(errorOutput, tempFileName) {
         row: parseInt(match[2], 10) - 1,
         column: Math.max(0, parseInt(match[3], 10) - 1),
         type: match[4] === 'warning' ? 'warning' : 'error',
-        text: match[5]
+        text: match[5] + missingHeaderHint(match[5])
       });
     }
   }

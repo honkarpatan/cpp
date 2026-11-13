@@ -1,0 +1,436 @@
+/* ═══════════════════════════════════════════════════════════
+   C/C++ Libraries page — colours come only from Acode theme
+   variables, so it follows every app / editor theme.
+   ═══════════════════════════════════════════════════════════ */
+.cpp-lib-body {
+  height: 100%;
+  overflow: auto;
+  background: var(--secondary-color, #1e1e1e);
+  color: var(--primary-text-color, #e8e8e8);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: contain;
+}
+.cpp-lib {
+  --lib-accent: var(--active-color, #3794ff);
+  --lib-ok: var(--success-color, #4caf7a);
+  --lib-warn: var(--warning-color, #d9a520);
+  --lib-danger: var(--danger-color, #f2655b);
+  --lib-line: var(--border-color, rgba(128, 128, 128, 0.28));
+  --lib-card: color-mix(in srgb, var(--primary-text-color, #fff) 5%, var(--secondary-color, #1e1e1e));
+  --lib-card-hi: color-mix(in srgb, var(--primary-text-color, #fff) 9%, var(--secondary-color, #1e1e1e));
+  --lib-muted: var(--secondary-text-color, rgba(232, 232, 232, 0.62));
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 12px 28px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.cpp-lib *, .cpp-lib *::before, .cpp-lib *::after { box-sizing: border-box; }
+.cpp-lib [hidden] { display: none !important; }
+.cpp-lib button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
+.cpp-lib-ico { display: inline-flex; flex: none; }
+
+/* top: search + chips */
+.cpp-lib-top {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  margin: 0 -12px;
+  padding: 10px 12px 8px;
+  background: color-mix(in srgb, var(--secondary-color, #1e1e1e) 92%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--lib-line);
+}
+.cpp-lib-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 6px 0 12px;
+  border-radius: 12px;
+  background: var(--lib-card);
+  border: 1px solid var(--lib-line);
+  color: var(--lib-muted);
+  transition: border-color .15s, box-shadow .15s;
+}
+.cpp-lib-search:focus-within {
+  border-color: var(--lib-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--lib-accent) 22%, transparent);
+  color: var(--primary-text-color, inherit);
+}
+.cpp-lib-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--primary-text-color, inherit);
+  font: inherit;
+  font-size: 15px;
+}
+.cpp-lib-input::-webkit-search-cancel-button { display: none; }
+.cpp-lib-input::placeholder { color: var(--lib-muted); opacity: .85; }
+.cpp-lib-chips {
+  display: flex;
+  gap: 8px;
+  margin: 10px -12px 0;
+  padding: 0 12px 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.cpp-lib-chips::-webkit-scrollbar { display: none; }
+.cpp-lib-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 13px;
+  border-radius: 16px;
+  border: 1px solid var(--lib-line);
+  background: transparent;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, transform .1s;
+}
+.cpp-lib-chip:active { transform: scale(.96); }
+.cpp-lib-chip.is-active {
+  background: color-mix(in srgb, var(--lib-accent) 22%, transparent);
+  border-color: var(--lib-accent);
+  color: var(--primary-text-color, inherit);
+  font-weight: 600;
+}
+.cpp-lib-chip-n {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  background: var(--lib-ok);
+  color: #fff;
+}
+
+/* generic buttons */
+.cpp-lib-iconbtn {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--lib-muted);
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+}
+.cpp-lib-iconbtn:hover, .cpp-lib-iconbtn:focus-visible { background: color-mix(in srgb, var(--primary-text-color, #fff) 12%, transparent); outline: 0; }
+.cpp-lib-iconbtn:active { transform: scale(.92); }
+.cpp-lib-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 92px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: filter .15s, transform .1s, background .15s;
+}
+.cpp-lib-btn:active:not(:disabled) { transform: scale(.95); }
+.cpp-lib-btn:focus-visible { outline: 2px solid var(--lib-accent); outline-offset: 2px; }
+.cpp-lib-btn.is-primary { background: var(--lib-accent); color: var(--primary-text-color-on-accent, #fff); }
+.cpp-lib-btn.is-primary:hover { filter: brightness(1.08); }
+.cpp-lib-btn.is-tonal {
+  background: color-mix(in srgb, var(--lib-accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--lib-accent) 35%, transparent);
+  color: var(--primary-text-color, inherit);
+}
+.cpp-lib-btn.is-busy { background: var(--lib-card-hi); color: var(--lib-muted); cursor: default; }
+.cpp-lib-btn.is-danger {
+  margin-top: 10px;
+  background: transparent;
+  border-color: color-mix(in srgb, var(--lib-danger) 55%, transparent);
+  color: var(--lib-danger);
+}
+.cpp-lib-link {
+  padding: 4px 2px;
+  border: 0;
+  background: transparent;
+  color: var(--lib-accent);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+.cpp-lib-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
+  animation: cpp-lib-spin .8s linear infinite;
+}
+@keyframes cpp-lib-spin { to { transform: rotate(360deg); } }
+
+/* summary / notes */
+.cpp-lib-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 12px 0 4px;
+  color: var(--lib-muted);
+  font-size: 13px;
+}
+.cpp-lib-summary b { color: var(--primary-text-color, inherit); }
+.cpp-lib-note {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--lib-card);
+  border: 1px solid var(--lib-line);
+}
+.cpp-lib-note.is-warn { border-color: color-mix(in srgb, var(--lib-warn) 55%, transparent); background: color-mix(in srgb, var(--lib-warn) 10%, var(--lib-card)); }
+.cpp-lib-note.is-warn .cpp-lib-ico { color: var(--lib-warn); }
+
+/* "needed by this file" */
+.cpp-lib-need-card {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--lib-warn) 11%, var(--lib-card));
+  border: 1px solid color-mix(in srgb, var(--lib-warn) 50%, transparent);
+  animation: cpp-lib-rise .28s ease-out;
+}
+.cpp-lib-need-head { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 8px; }
+.cpp-lib-need-head .cpp-lib-ico { color: var(--lib-warn); }
+.cpp-lib-need-list { display: flex; flex-direction: column; gap: 6px; }
+.cpp-lib-need-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--lib-line);
+  border-radius: 10px;
+  background: var(--lib-card);
+  cursor: pointer;
+}
+.cpp-lib-need-item:disabled { opacity: .7; cursor: default; }
+.cpp-lib-need-act { color: var(--lib-accent); font-weight: 600; font-size: 13px; }
+.cpp-lib-need-all { width: 100%; margin-top: 8px; }
+
+/* cards */
+.cpp-lib-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.cpp-lib-card {
+  --h: 215;
+  border-radius: 14px;
+  background: var(--lib-card);
+  border: 1px solid var(--lib-line);
+  overflow: hidden;
+  transition: background .15s, border-color .2s, box-shadow .2s;
+  animation: cpp-lib-rise .26s ease-out both;
+}
+.cpp-lib-card.is-open { background: var(--lib-card-hi); }
+.cpp-lib-card.is-installed { border-color: color-mix(in srgb, var(--lib-ok) 45%, var(--lib-line)); }
+.cpp-lib-card.is-busy { border-color: var(--lib-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lib-accent) 14%, transparent); }
+.cpp-lib-card.is-pop { animation: cpp-lib-pop .5s cubic-bezier(.2, .9, .3, 1.3); }
+.cat-data { --h: 205; } .cat-net { --h: 160; } .cat-json { --h: 40; } .cat-text { --h: 280; }
+.cat-math { --h: 330; } .cat-zip { --h: 20; } .cat-test { --h: 120; } .cat-term { --h: 185; }
+.cat-gfx { --h: 255; } .cat-misc { --h: 225; }
+
+.cpp-lib-card-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  min-height: 68px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform .1s;
+}
+.cpp-lib-card-main:active { transform: scale(.992); }
+.cpp-lib-card-main:focus-visible { outline: 2px solid var(--lib-accent); outline-offset: -2px; }
+.cpp-lib-avatar {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: .02em;
+  background: hsl(var(--h) 60% 50% / .18);
+  color: color-mix(in srgb, hsl(var(--h) 75% 55%) 78%, var(--primary-text-color, #fff));
+}
+.is-installed > .cpp-lib-card-main > .cpp-lib-avatar { background: color-mix(in srgb, var(--lib-ok) 20%, transparent); color: var(--lib-ok); }
+.cpp-lib-info { flex: 1; min-width: 0; }
+.cpp-lib-name { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-weight: 600; font-size: 15px; }
+.cpp-lib-desc { color: var(--lib-muted); font-size: 13px; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cpp-lib-badge {
+  padding: 1px 7px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--lib-muted);
+  background: color-mix(in srgb, var(--primary-text-color, #fff) 10%, transparent);
+}
+.cpp-lib-badge.is-warn { color: var(--lib-warn); background: color-mix(in srgb, var(--lib-warn) 16%, transparent); }
+.cpp-lib-badge.is-ok { color: var(--lib-ok); background: color-mix(in srgb, var(--lib-ok) 16%, transparent); }
+.cpp-lib-action { flex: none; }
+
+/* install progress */
+.cpp-lib-progress { padding: 0 12px 12px; }
+.cpp-lib-progress-bar {
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--lib-accent) 18%, transparent);
+  position: relative;
+}
+.cpp-lib-progress-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 38%;
+  border-radius: 2px;
+  background: var(--lib-accent);
+  animation: cpp-lib-slide 1.15s ease-in-out infinite;
+}
+@keyframes cpp-lib-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(270%); } }
+.cpp-lib-progress-text {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--lib-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.cpp-lib-progress-text span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* error */
+.cpp-lib-error {
+  display: flex;
+  gap: 8px;
+  margin: 0 12px 12px;
+  padding: 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--lib-danger) 11%, transparent);
+  border: 1px solid color-mix(in srgb, var(--lib-danger) 45%, transparent);
+}
+.cpp-lib-error > .cpp-lib-ico { color: var(--lib-danger); margin-top: 1px; }
+.cpp-lib-error-body { min-width: 0; flex: 1; }
+.cpp-lib-error-msg { font-size: 13px; }
+.cpp-lib-error-actions { display: flex; gap: 12px; margin-top: 4px; }
+.cpp-lib-log {
+  margin: 8px 0 0;
+  padding: 8px;
+  max-height: 150px;
+  overflow: auto;
+  border-radius: 8px;
+  background: color-mix(in srgb, #000 28%, transparent);
+  font-size: 11.5px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* details (smooth expand with grid rows) */
+.cpp-lib-details {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows .26s ease;
+}
+.cpp-lib-card.is-open .cpp-lib-details { grid-template-rows: 1fr; }
+.cpp-lib-details-inner { overflow: hidden; min-height: 0; padding: 0 12px; }
+.cpp-lib-card.is-open .cpp-lib-details-inner { padding-bottom: 14px; }
+.cpp-lib-code {
+  position: relative;
+  padding: 10px 76px 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #000 24%, var(--secondary-color, #1e1e1e));
+  border: 1px solid var(--lib-line);
+}
+.cpp-lib-code code {
+  display: block;
+  white-space: pre;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+}
+.cpp-lib-code-actions { position: absolute; top: 2px; right: 2px; display: flex; }
+.cpp-lib-meta { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 12px 0 0; font-size: 13px; }
+.cpp-lib-meta dt { color: var(--lib-muted); }
+.cpp-lib-meta dd { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; word-break: break-word; }
+.cpp-lib-hint { margin: 10px 0 0; color: var(--lib-muted); font-size: 12.5px; }
+.cpp-lib-hint.is-warn { color: var(--lib-warn); }
+
+/* skeleton */
+.cpp-lib-card.is-skeleton { pointer-events: none; }
+.is-skeleton .cpp-lib-avatar, .cpp-lib-sk-line {
+  background: linear-gradient(90deg, var(--lib-card-hi) 25%, color-mix(in srgb, var(--primary-text-color, #fff) 16%, var(--secondary-color, #1e1e1e)) 50%, var(--lib-card-hi) 75%);
+  background-size: 200% 100%;
+  animation: cpp-lib-shimmer 1.3s infinite linear;
+}
+.cpp-lib-sk-line { height: 12px; border-radius: 6px; margin: 7px 0; }
+.cpp-lib-sk-line.w60 { width: 60%; } .cpp-lib-sk-line.w90 { width: 90%; }
+@keyframes cpp-lib-shimmer { to { background-position: -200% 0; } }
+
+/* empty + alpine search */
+.cpp-lib-empty { padding: 36px 16px; text-align: center; }
+.cpp-lib-empty-title { font-weight: 600; margin-bottom: 4px; }
+.cpp-lib-empty-sub { color: var(--lib-muted); font-size: 13px; }
+.cpp-lib-section { margin: 22px 0 8px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--lib-muted); }
+.cpp-lib-searchall {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 14px;
+  text-align: left;
+  border-radius: 12px;
+  border: 1px dashed color-mix(in srgb, var(--lib-accent) 60%, transparent);
+  background: color-mix(in srgb, var(--lib-accent) 8%, transparent);
+  cursor: pointer;
+}
+.cpp-lib-searchall:active { transform: scale(.99); }
+.cpp-lib-searchall .cpp-lib-ico { color: var(--lib-accent); }
+.cpp-lib-searchall code { font-size: 12px; }
+.cpp-lib-searching { display: flex; align-items: center; gap: 10px; padding: 14px 4px; color: var(--lib-muted); }
+.cpp-lib-rows { display: flex; flex-direction: column; gap: 6px; }
+.cpp-lib-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  border-radius: 12px;
+  background: var(--lib-card);
+  border: 1px solid var(--lib-line);
+}
+.cpp-lib-row.is-installed { border-color: color-mix(in srgb, var(--lib-ok) 45%, var(--lib-line)); }
+.cpp-lib-row-main { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cpp-lib-row-name { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; word-break: break-all; }
+.cpp-lib-row-err { width: 100%; color: var(--lib-danger); font-size: 12px; }
+.cpp-lib-foot { margin-top: 24px; text-align: center; color: var(--lib-muted); font-size: 12px; }
+
+@keyframes cpp-lib-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes cpp-lib-pop { 0% { transform: scale(.97); } 45% { transform: scale(1.025); box-shadow: 0 0 0 6px color-mix(in srgb, var(--lib-ok) 28%, transparent); } 100% { transform: scale(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .cpp-lib *, .cpp-lib *::before, .cpp-lib *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}

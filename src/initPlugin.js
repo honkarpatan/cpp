@@ -258,6 +258,7 @@ export function destroyPlugin() {
     hideContextMenu(); 
     try { destroyProblemsUI(); } catch (_) {}
     try { unregisterToolsPanel(); } catch (_) {}
+    try { import('./libraries/index.js').then((m) => m.destroyLibraries()).catch(() => {}); } catch (_) {}
     try { disposeFindReferences(); } catch (_) {}
     try { destroyInputChips(); } catch (_) {}
     try { destroyInlineRunOutput(); } catch (_) {}

@@ -603,6 +603,17 @@ function completionList() {
 function depsList() {
   return [
     {
+      key: '__libs_open',
+      text: 'Libraries',
+      actionOnly: true,
+      info: 'Install SQLite, curl, SDL2, Boost… (auto-linked)',
+      onAction: () => {
+        import('./libraries/index.js')
+          .then((m) => m.openLibraries())
+          .catch(console.error);
+      },
+    },
+    {
       key: '__deps_check',
       text: 'Check dependencies',
       actionOnly: true,
