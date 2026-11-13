@@ -27,6 +27,7 @@ const TOOL_ACTIONS = [
   ['format', 'Format document'],
   ['autoImport', 'Auto import headers'],
   ['problems', 'Open Problems'],
+  ['libraries', 'Libraries…'],
   ['deps', 'Dependencies…'],
   ['runTerm', 'Run in terminal'],
   ['runPopup', 'Run · popup'],
@@ -114,6 +115,15 @@ async function handleAction(id) {
       openProblemsPagePublic();
     } catch (_) {
       toast('Problems', 1200);
+    }
+    return;
+  }
+  if (id === 'libraries') {
+    try {
+      const { openLibraries } = await import('./libraries/index.js');
+      openLibraries();
+    } catch (e) {
+      toast('Libraries: ' + (e?.message || e), 2000);
     }
     return;
   }
