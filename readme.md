@@ -4,7 +4,7 @@
     font-weight: bold;
   ">C/C++</span><sup style="font-size:0.6rem;font-weight:300;color:#131305;padding:0 0 0 5px;">All in One</sup></h1>
   <div style="margin-left:auto;display:flex;flex-direction:column;gap:5px;">
-    <small style="font-size:0.6em;color:#0f4128;">v2.1.2</small>
+    <small style="font-size:0.6em;color:#0f4128;">v2.1.3</small>
     <small style="font-size:0.6em;color:#403710;">Stable</small>
   </div>
 </div>
@@ -14,7 +14,7 @@ An extension for **Acode Editor**, bringing full **C/C++** development capabilit
 ---
 
 <p align="center"> 
-  <img src="https://img.shields.io/badge/Version-2.1.2-blue?style=for-the-badge">
+  <img src="https://img.shields.io/badge/Version-2.1.3-blue?style=for-the-badge">
   
   <img src="https://img.shields.io/badge/premium✨-yellow?style=for-the-badge">
   

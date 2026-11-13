@@ -124,7 +124,7 @@ export const PEEK_CSS = `
   margin: 1px 4px;
   padding: 3px 10px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 1px;
   line-height: 20px;
   white-space: pre;
   overflow: hidden;

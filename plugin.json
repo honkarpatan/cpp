@@ -2,7 +2,7 @@
   "id": "plugin.acode.corcpptools",
   "name": "C/C++",
   "main": "dist/main.js",
-  "version": "2.1.2",
+  "version": "2.1.3",
   "readme": "readme.md",
   "icon": "icon.png",
   "license": "Proprietary",

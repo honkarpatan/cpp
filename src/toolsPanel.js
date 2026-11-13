@@ -21,6 +21,7 @@ function isCppFile(file) {
 const TOOL_ACTIONS = [
   ['gotoDef', 'Go to Definition'],
   ['findRefs', 'Find References'],
+  ['rename', 'Rename symbol'],
   ['addTopPath', 'Add top commented path'],
   ['lint', 'Lint now'],
   ['format', 'Format document'],
@@ -66,6 +67,17 @@ async function addTopCommentedPath() {
 
 async function handleAction(id) {
   if (id === 'gotoDef') return executeGoToDefinition();
+  if (id === 'rename') {
+    try {
+      console.log('[CppRename] tools panel → executeRenameSymbol');
+      const { executeRenameSymbol } = await import('./goToDefinition.js');
+      await executeRenameSymbol();
+    } catch (e) {
+      console.warn('[CppRename] tools panel error', e);
+      toast('Rename: ' + (e?.message || e), 2000);
+    }
+    return;
+  }
   if (id === 'findRefs') return executeFindReferences();
   if (id === 'addTopPath') return addTopCommentedPath();
   if (id === 'lint') {

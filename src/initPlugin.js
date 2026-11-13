@@ -15,12 +15,7 @@ import { registerToolsPanel, unregisterToolsPanel } from './toolsPanel.js';
 import { disposeFindReferences } from './findReferences.js';
 
 import { executeGoToDefinition } from './goToDefinition.js'; 
-import {
-  showContextMenu,
-  hideContextMenu,
-  registerGoToDefSelectionMenu,
-  registerGotoDefIcon
-} from './customContextMenu.js';
+import { hideContextMenu } from './customContextMenu.js';
 
 // 🚀 NEW: LSP Import
 import { registerClangdServer, unregisterClangdServer } from './lspServer.js';
@@ -217,14 +212,6 @@ export function initPlugin(baseUrl) {
     initProblemsUI();
   } catch (e) {
     console.warn('[Problems] UI init failed:', e);
-  }
-
-  // Go to Definition → acode.addIcon + selection menu
-  try {
-    registerGotoDefIcon();
-    registerGoToDefSelectionMenu();
-  } catch (e) {
-    console.warn('[GoToDef] selectionMenu init failed:', e);
   }
 
   // Input chips (scanf / cin) — small non-intrusive chips
