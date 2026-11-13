@@ -5,6 +5,7 @@
  */
 
 import { getSettings } from './settings.js';
+import { findLoops, getInnermostLoop, resolveLoopRounds } from './loopInput.js';
 import { clearChipsOnEdit } from './inputChips.js';
 
 let compartment = null;
@@ -180,17 +181,26 @@ function extractPrintLiteral(line) {
       .replace(/\\\\/g, '\\')
       .replace(/\\"/g, '"')
       .replace(/\\'/g, "'");
+    const fullFormat = lit;
     const pct = lit.search(/%[0-9#0 +\-]*\.?[0-9]*[diuoxXfFeEgGaAcspn%]/);
     let body = pct >= 0 ? lit.slice(0, pct) : lit;
     const leadingNL = (body.match(/^\n+/) || [''])[0].length;
     const trailingNL = (body.match(/\n+$/) || [''])[0].length;
     body = body.replace(/^\n+/, '').replace(/\n+$/, '');
     const internalNL = (body.match(/\n/g) || []).length;
-    // needle: no leading/trailing newlines (stdout may have already consumed them as line breaks)
+    // Prefer static prefix as needle; keep fullFormat for loop splitting when % is present
     const needle = body;
-    const score = needle.replace(/\n/g, '').trim().length;
-    if (score >= 1 || leadingNL > 0) {
-      literals.push({ needle, leadingNL, trailingNL, internalNL, score });
+    const score = needle.replace(/\n/g, '').trim().length + (pct >= 0 ? 2 : 0);
+    if (score >= 1 || leadingNL > 0 || pct >= 0) {
+      literals.push({
+        needle,
+        fullFormat,
+        hasSpec: pct >= 0,
+        leadingNL,
+        trailingNL,
+        internalNL,
+        score: Math.max(score, pct >= 0 ? 3 : score),
+      });
     }
   }
   if (!literals.length && /<<\s*["']/.test(s)) {
@@ -240,16 +250,124 @@ function applyNewlineMarkers(text, site) {
   return out;
 }
 
+
+/** Escape for RegExp source */
+function escapeRe(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Build a global regex that matches one printf iteration from a format string.
+ * e.g. "%d Hello this is test " → /\d+ Hello this is test /g
+ */
+function printfFormatToRegex(fmt) {
+  const f = String(fmt || '');
+  if (!f) return null;
+  let re = '';
+  let i = 0;
+  while (i < f.length) {
+    if (f[i] === '%' && i + 1 < f.length) {
+      if (f[i + 1] === '%') {
+        re += '%';
+        i += 2;
+        continue;
+      }
+      let j = i + 1;
+      while (j < f.length && /[-+#0 \d.]/.test(f[j])) j++;
+      const spec = f[j] || 's';
+      if (/[diouxX]/.test(spec)) re += '\\d+';
+      else if (spec === 'c') re += '[\\s\\S]';
+      else if (/[eEfFgGaA]/.test(spec)) re += '[-+]?\\d*\\.?\\d+(?:[eE][-+]?\\d+)?';
+      else re += '[\\s\\S]+?';
+      i = j + 1;
+    } else {
+      re += escapeRe(f[i]);
+      i++;
+    }
+  }
+  if (!re) return null;
+  try {
+    return new RegExp(re, 'g');
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * Split one physical stdout blob into per-iteration strings for a loop print.
+ */
+function splitLoopOutput(text, info, rounds) {
+  const raw = String(text || '');
+  const n = Math.max(1, rounds | 0);
+  if (n <= 1) return raw ? [raw] : [];
+
+  // Prefer newline-separated
+  const byNl = raw.split('\n').filter((l) => l.length > 0);
+  if (byNl.length >= n) return byNl.slice(0, n);
+  if (byNl.length > 1 && byNl.length >= Math.ceil(n / 2)) return byNl;
+
+  const fmt = (info && (info.fullFormat || info.needle)) || '';
+  const re = printfFormatToRegex(fmt);
+  if (re) {
+    const hits = raw.match(re);
+    if (hits && hits.length) return hits.slice(0, n);
+  }
+
+  // Static separator (longest non-empty static chunk)
+  const staticParts = String(fmt)
+    .split(/%[0-9#0 +\-]*\.?[0-9]*[diuoxXfFeEgGaAcspn%]/)
+    .filter((s) => s.length >= 2);
+  staticParts.sort((a, b) => b.length - a.length);
+  if (staticParts[0]) {
+    const sep = staticParts[0];
+    const parts = [];
+    let rest = raw;
+    for (let r = 0; r < n && rest.length; r++) {
+      if (r === n - 1) {
+        parts.push(rest);
+        break;
+      }
+      const idx = rest.indexOf(sep);
+      if (idx === -1) {
+        parts.push(rest);
+        rest = '';
+        break;
+      }
+      const end = idx + sep.length;
+      parts.push(rest.slice(0, end));
+      rest = rest.slice(end);
+    }
+    if (parts.length > 1) return parts;
+  }
+
+  return raw ? [raw] : [];
+}
+
 function mapOutputToPrintLines(code, output) {
   const codeLines = String(code || '').split('\n');
   /** @type {{ idx: number, lit: ReturnType<typeof extractPrintLiteral> }[]} */
   const printSites = [];
+  let loops = [];
+  try {
+    loops = findLoops(code);
+  } catch (_) {}
+  const maxLoop = getSettings().maxLoopInputs ?? 100;
   for (let i = 0; i < codeLines.length; i++) {
     if (
       /\b(printf|puts|putchar|cout|cerr|clog|wprintf)\b/.test(codeLines[i]) ||
       /<<\s*["']/.test(codeLines[i])
     ) {
-      printSites.push({ idx: i, lit: extractPrintLiteral(codeLines[i]) });
+      let loopRounds = 1;
+      try {
+        const loop = getInnermostLoop(loops, i);
+        if (loop) {
+          const resolved = resolveLoopRounds(loop, maxLoop, null);
+          if (resolved.rounds != null && resolved.rounds > 0) {
+            loopRounds = Math.max(1, resolved.rounds);
+          }
+        }
+      } catch (_) {}
+      printSites.push({ idx: i, lit: extractPrintLiteral(codeLines[i]), loopRounds });
     }
   }
 
@@ -285,65 +403,120 @@ function mapOutputToPrintLines(code, output) {
     const info = site.lit;
     if (!info) continue;
     const needle = info.needle;
-    // pure-newline printf: needle may be empty — match nothing in stream, only markers
+    const rounds = Math.max(1, site.loopRounds || 1);
+
+    // Empty static needle (e.g. printf("%d Hello…") starts with %)
     if (!needle.replace(/\n/g, '').trim()) {
+      if (info.hasSpec || info.fullFormat) {
+        // Grab stream until next different site's literal (or end)
+        let endPos = stream.length;
+        for (const other of printSites) {
+          if (other.idx === site.idx || !other.lit) continue;
+          const on = (other.lit.needle || '').replace(/\n/g, '');
+          if (!on.trim()) continue;
+          let p = stream.indexOf(other.lit.needle);
+          if (p === -1) p = stream.indexOf(on);
+          if (p !== -1 && p < endPos) endPos = p;
+        }
+        let blob = stream.slice(0, endPos);
+        stream = stream.slice(endPos);
+        // drop trailing newline only if next site will want it
+        if (blob.endsWith('\n') && endPos < stream.length + blob.length) {
+          /* keep in blob; splitLoopOutput handles */
+        }
+        const pieces = splitLoopOutput(blob.replace(/^\n/, '').replace(/\n$/, ''), info, rounds);
+        if (!map.has(site.idx)) map.set(site.idx, []);
+        for (const piece of pieces) {
+          const d = applyNewlineMarkers(piece, info);
+          if (d) map.get(site.idx).push(d);
+        }
+        if (map.get(site.idx).length) used.add(site.idx);
+        continue;
+      }
       if (info.leadingNL || info.trailingNL) {
         if (!map.has(site.idx)) map.set(site.idx, []);
-        map.get(site.idx).push(applyNewlineMarkers('', info));
+        for (let r = 0; r < rounds; r++) {
+          map.get(site.idx).push(applyNewlineMarkers('', info));
+        }
         used.add(site.idx);
       }
       continue;
     }
 
-    // Search for needle with optional surrounding whitespace; prefer exact
-    const searchNeedle = needle.replace(/\n/g, ''); // match without embedded NL
-    // Try full needle first (may contain internal \\n as real newlines in stream)
-    let pos = stream.indexOf(needle);
-    if (pos === -1 && searchNeedle !== needle) pos = stream.indexOf(searchNeedle);
-    if (pos === -1) continue;
+    const searchNeedle = needle.replace(/\n/g, '');
+    let matchedAny = false;
 
-    const matchLen = pos === stream.indexOf(needle) ? needle.length : searchNeedle.length;
-    let start = pos;
-    // Consume one leading \\n in stream if format had leadingNL (shows as ↵, not new site)
-    if (info.leadingNL > 0 && start > 0 && stream[start - 1] === '\n') {
-      start -= 1;
-    }
+    for (let r = 0; r < rounds; r++) {
+      let pos = stream.indexOf(needle);
+      if (pos === -1 && searchNeedle !== needle) pos = stream.indexOf(searchNeedle);
+      if (pos === -1) break;
 
-    const after = pos + matchLen;
-    let end = stream.length;
-    let nextLitPos = -1;
-    for (const other of printSites) {
-      if (other.idx === site.idx || !other.lit || used.has(other.idx)) continue;
-      const on = other.lit.needle.replace(/\n/g, '');
-      if (!on.trim()) continue;
-      let p = stream.indexOf(other.lit.needle, after);
-      if (p === -1) p = stream.indexOf(on, after);
-      if (p !== -1 && (nextLitPos === -1 || p < nextLitPos)) nextLitPos = p;
-    }
-    if (nextLitPos !== -1) {
-      end = nextLitPos;
-      // don't eat the next site's leading newline
-      if (end > after && stream[end - 1] === '\n') end -= 1;
-    } else {
-      const nl = stream.indexOf('\n', after);
-      // If this printf has trailingNL, include that newline in our fragment
-      if (info.trailingNL > 0 && nl !== -1) {
-        end = nl + 1;
-      } else if (nl !== -1) {
-        end = nl;
+      const matchLen = stream.startsWith(needle, pos) ? needle.length : searchNeedle.length;
+      let startPos = pos;
+      if (info.leadingNL > 0 && startPos > 0 && stream[startPos - 1] === '\n') {
+        startPos -= 1;
       }
-    }
 
-    let fragment = stream.slice(start, end);
-    // strip one leading/trailing newline from raw fragment — markers come from format
-    fragment = fragment.replace(/^\n/, '').replace(/\n$/, '');
-    const display = applyNewlineMarkers(fragment, info);
-    if (display.trim() || info.leadingNL || info.trailingNL) {
-      if (!map.has(site.idx)) map.set(site.idx, []);
-      map.get(site.idx).push(display || '↵');
+      const after = pos + matchLen;
+      let endPos = stream.length;
+      let nextLitPos = -1;
+      for (const other of printSites) {
+        if (other.idx === site.idx || !other.lit) continue;
+        const on = (other.lit.needle || '').replace(/\n/g, '');
+        if (!on.trim()) continue;
+        let p = stream.indexOf(other.lit.needle, after);
+        if (p === -1) p = stream.indexOf(on, after);
+        if (p !== -1 && (nextLitPos === -1 || p < nextLitPos)) nextLitPos = p;
+      }
+      if (r < rounds - 1) {
+        let selfNext = stream.indexOf(needle, after);
+        if (selfNext === -1 && searchNeedle !== needle) {
+          selfNext = stream.indexOf(searchNeedle, after);
+        }
+        if (selfNext !== -1 && (nextLitPos === -1 || selfNext < nextLitPos)) {
+          nextLitPos = selfNext;
+        }
+      }
+
+      if (nextLitPos !== -1) {
+        endPos = nextLitPos;
+        if (endPos > after && stream[endPos - 1] === '\n') endPos -= 1;
+      } else {
+        const nl = stream.indexOf('\n', after);
+        if (info.trailingNL > 0 && nl !== -1) endPos = nl + 1;
+        else if (nl !== -1) endPos = nl;
+      }
+
+      let fragment = stream.slice(startPos, endPos);
+      fragment = fragment.replace(/^\n/, '').replace(/\n$/, '');
+      const display = applyNewlineMarkers(fragment, info);
+      if (display.trim() || info.leadingNL || info.trailingNL) {
+        if (!map.has(site.idx)) map.set(site.idx, []);
+        map.get(site.idx).push(display || '↵');
+        matchedAny = true;
+      }
+      stream = stream.slice(0, startPos) + stream.slice(endPos);
     }
-    stream = stream.slice(0, start) + stream.slice(end);
-    used.add(site.idx);
+    if (matchedAny) used.add(site.idx);
+  }
+
+
+  // Expand single-blob loop prints into one entry per iteration (block UI)
+  for (const site of printSites) {
+    const rounds = Math.max(1, site.loopRounds || 1);
+    if (rounds <= 1) continue;
+    const arr = map.get(site.idx);
+    if (!arr || !arr.length) continue;
+    if (arr.length >= rounds) continue;
+    // Join current fragments and re-split by format / static text
+    const joined = arr.join('');
+    const pieces = splitLoopOutput(joined, site.lit, rounds);
+    if (pieces.length > 1) {
+      map.set(
+        site.idx,
+        pieces.map((x) => applyNewlineMarkers(x, site.lit)).filter(Boolean)
+      );
+    }
   }
 
   const remaining = stream
@@ -593,18 +766,70 @@ export function showInlineRunOutput(code, output) {
         }
       }
 
+      /** Multi-iteration loop prints — block widget expands space under the line */
+      class GhostBlock extends cmView.WidgetType {
+        constructor(texts) {
+          super();
+          this.texts = texts || [];
+        }
+        eq(other) {
+          return (
+            other instanceof GhostBlock &&
+            other.texts.length === this.texts.length &&
+            other.texts.every((x, i) => x === this.texts[i])
+          );
+        }
+        toDOM() {
+          const wrap = document.createElement('div');
+          wrap.className = 'cm-cpp-inline-log-block';
+          wrap.setAttribute('data-cpp-inline-run', '1');
+          wrap.style.cssText =
+            'display:block;padding:2px 0 4px 1.2em;margin:1px 0 4px;border-left:2px solid rgba(128,203,196,0.45);';
+          for (let i = 0; i < this.texts.length; i++) {
+            const row = document.createElement('div');
+            row.className = 'cm-cpp-inline-run-log';
+            row.style.cssText =
+              'opacity:0.9;font-size:0.88em;white-space:pre;font-style:italic;color:#80cbc4;line-height:1.35;';
+            row.textContent = this.texts[i];
+            wrap.appendChild(row);
+          }
+          return wrap;
+        }
+        get estimatedHeight() {
+          return Math.max(16, this.texts.length * 16);
+        }
+        ignoreEvent() {
+          return true;
+        }
+      }
+
       const ranges = [];
       const doc = editor.state.doc;
       logMap.forEach((texts, lineIdx) => {
         try {
           const lineNo = Math.min(lineIdx + 1, doc.lines);
           const line = doc.line(lineNo);
-          const label = formatLogLabel(texts);
-          if (!label) return;
-          const widget = new GhostWidget(label);
-          ranges.push(
-            cmView.Decoration.widget({ widget, side: 1, block: false }).range(line.to)
-          );
+          const arr = (Array.isArray(texts) ? texts : [texts])
+            .map(formatLogFragment)
+            .filter((x) => x && x.length);
+          if (!arr.length) return;
+          if (arr.length === 1) {
+            ranges.push(
+              cmView.Decoration.widget({
+                widget: new GhostWidget(arr[0]),
+                side: 1,
+                block: false,
+              }).range(line.to)
+            );
+          } else {
+            ranges.push(
+              cmView.Decoration.widget({
+                widget: new GhostBlock(arr),
+                side: 1,
+                block: true,
+              }).range(line.to)
+            );
+          }
         } catch (_) {}
       });
 

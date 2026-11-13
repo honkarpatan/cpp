@@ -1242,3 +1242,16 @@ span.cm-cpp-input-chip {
   background: rgba(25, 80, 120, 0.78);
   color: #e3f2fd;
 }
+
+
+/* Inline multi-line loop logs */
+.cm-cpp-inline-log-block {
+  display: block;
+  padding: 2px 0 4px 1.2em;
+  margin: 1px 0 4px;
+  border-left: 2px solid rgba(128, 203, 196, 0.45);
+}
+.cm-cpp-inline-log-block .cm-cpp-inline-run-log {
+  line-height: 1.35;
+  white-space: pre;
+}

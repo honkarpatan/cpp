@@ -8,8 +8,11 @@ export const defaultSettings = {
   // Runner
   runMode: 'ask', // ask | terminal | popup | inline
   runInClearScreen: true,
+  /** Optional shell lines before compile (terminal mode) */
+  terminalShellPrefix: '',
+  /** Extra args after the program binary */
+  runArgs: '',
   enableInlineRunLogs: true,
-  feedChipsInTerminal: false,
   feedChipsInTerminal: false,
 
   // Terminal extra banners (inline never shows these)
@@ -77,5 +80,7 @@ export const defaultSettings = {
   formatOnSave: false,
 
   // Internal
+  showToolsSideButton: true,
   dependenciesInstalled: false,
 };
+

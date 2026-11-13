@@ -23,7 +23,7 @@ import { showInlineRunOutput, clearInlineRunOutput, isErrorOutput } from './inli
 function createRunScript(project, displayPath, {
   clearScreen = true,
   stdinB64 = null,
-  mode = 'terminal', // terminal | popup | inline
+  mode = 'terminal', // terminal | popup | inline | inline-input
 } = {}) {
   const { mainFileName, isCpp, fileContents, projectDir } = project;
   const outputName = mainFileName.replace(/\.[^/.]+$/, '') || 'a.out';
@@ -36,8 +36,8 @@ function createRunScript(project, displayPath, {
     : settings.cStandard || 'gnu11';
   const extraFlags = (settings.compilerFlags || '-Wall -Wextra -O2').trim();
 
-  // Inline: never print meta banners (only program stdout)
-  const isInline = mode === 'inline';
+  // Inline / inline-input: never print meta banners (only program stdout)
+  const isInline = mode === 'inline' || mode === 'inline-input';
   const isPopup = mode === 'popup';
   const isTerm = mode === 'terminal' || (!isInline && !isPopup);
 
@@ -52,10 +52,15 @@ function createRunScript(project, displayPath, {
   const showCmd = show('termShowCommand', 'popupShowCommand');
   const showRunBanner = show('termShowRunBanner', 'popupShowRunBanner');
   const showTiming = show('termShowTiming', 'popupShowTiming');
+  const runArgs = String(settings.runArgs || '').trim();
   const showExit = show('termShowExitCode', 'popupShowExitCode');
 
   let script = '#!/bin/sh\n';
   if (clearScreen && isTerm) script += "printf '\\033[2J\\033[H' 2>/dev/null || true\n";
+  const shellPrefix = String(settings.terminalShellPrefix || '').trim();
+  if (shellPrefix && isTerm) {
+    script += shellPrefix.replace(/\r/g, '') + (shellPrefix.endsWith('\n') ? '' : '\n');
+  }
 
   script += `WORKDIR='${shellEscape(projectDir)}'\n`;
   script += 'mkdir -p "$WORKDIR" || exit 1\n';
@@ -109,9 +114,9 @@ function createRunScript(project, displayPath, {
     script += 'echo\n';
   }
   if (stdinB64) {
-    script += `'${shellEscape(outputExe)}' < .stdin_payload\n`;
+    script += `'${shellEscape(outputExe)}'${runArgs ? ' ' + runArgs : ''} < .stdin_payload\n`;
   } else {
-    script += `'${shellEscape(outputExe)}'\n`;
+    script += `'${shellEscape(outputExe)}'${runArgs ? ' ' + runArgs : ''}\n`;
   }
   script += 'EXIT_CODE=$?\n';
   script += 'END_TIME=$(date +%s.%N 2>/dev/null || date +%s)\n';
@@ -169,7 +174,7 @@ async function pickRunMode() {
     [
       ['terminal', 'Run in terminal'],
       ['popup', 'Run in popup'],
-      ['inline', 'Run inline editor (beta)'],
+      ['inline', 'Run inline'],
     ],
     { hideOnSelect: true }
   );
@@ -384,11 +389,12 @@ async function runViaExecutor(project, displayPath, stdinB64, mode = 'popup') {
  * Guard: if input chips enabled and required values missing → block non-terminal run.
  * Terminal mode still allows interactive typing.
  */
-function checkInputsOrBlock(file, mode) {
+function checkInputsOrBlock(file, mode, opts = {}) {
   const settings = getSettings();
   if (settings.enableInputChips === false) return true;
   if (mode === 'terminal') return true; // user can type in terminal
-  if (settings.blockRunWithoutInputs === false) return true;
+  // inline-input always blocks when chips incomplete
+  if (!opts.forceChips && settings.blockRunWithoutInputs === false) return true;
 
   const code = readEditorText(file);
   const sites = findInputSites(code);
@@ -435,8 +441,11 @@ export async function compileAndRun(file, opts = {}) {
     mode = await pickRunMode();
     if (!mode) return;
   }
+  // inline-input → same pipeline as inline, but always require chip stdin when chips enabled
+  const forceChipInputs = mode === 'inline-input';
+  if (mode === 'inline-input') mode = 'inline';
 
-  if (!checkInputsOrBlock(file, mode)) {
+  if (!checkInputsOrBlock(file, mode, { forceChips: forceChipInputs })) {
     return;
   }
 

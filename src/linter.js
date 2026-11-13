@@ -9,7 +9,6 @@ import { updateLogMap, clearAllLogs } from './inlineDisplay.js';
 import { setFileProblems, clearFileProblems } from './problemsStore.js';
 
 let lintInProgress = false;
-let pendingRelint = null;
 let currentErrorMarkers = [];
 
 /**
@@ -115,16 +114,11 @@ export async function runLinter(session, file) {
   const settings = getSettings();
   const linterMode = settings.enableLinter;
 
-  if (linterMode === 'disable') {
-    clearLinterState(session);
-    clearAllLogs();
-    pendingRelint = null;
-    return;
-  }
-
-  // Queue latest request if a lint is already in flight (autocomplete mid-lint)
-  if (lintInProgress) {
-    pendingRelint = { session, file };
+  if (linterMode === 'disable' || lintInProgress) {
+    if (linterMode === 'disable') {
+      clearLinterState(session);
+      clearAllLogs();
+    }
     return;
   }
 
@@ -244,14 +238,6 @@ export async function runLinter(session, file) {
       updateLogMap(errorMapForThisRun);
     } else {
       updateLogMap(new Map());
-    }
-    // Run queued lint with latest editor buffer (fixes stale "#in" after "#include")
-    if (pendingRelint) {
-      const next = pendingRelint;
-      pendingRelint = null;
-      setTimeout(() => {
-        runLinter(next.session, next.file).catch(() => {});
-      }, 0);
     }
   }
 }

@@ -21,7 +21,6 @@ function createPopupElement() {
         white-space: pre-wrap;
         max-width: 80vw;
     `;
-  
     document.body.appendChild(popupElement);
     return popupElement;
 }
