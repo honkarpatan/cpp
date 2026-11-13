@@ -9,6 +9,7 @@ import { updateLogMap, clearAllLogs } from './inlineDisplay.js';
 import { setFileProblems, clearFileProblems } from './problemsStore.js';
 
 let lintInProgress = false;
+let lintPending = null; // { session, file } requested while a lint was running
 let currentErrorMarkers = [];
 
 /**
@@ -114,11 +115,16 @@ export async function runLinter(session, file) {
   const settings = getSettings();
   const linterMode = settings.enableLinter;
 
-  if (linterMode === 'disable' || lintInProgress) {
-    if (linterMode === 'disable') {
-      clearLinterState(session);
-      clearAllLogs();
-    }
+  if (linterMode === 'disable') {
+    lintPending = null;
+    clearLinterState(session);
+    clearAllLogs();
+    return;
+  }
+  if (lintInProgress) {
+    // Don't drop the request: the user kept typing while gcc was running.
+    // Remember it and lint the newest code as soon as the current run ends.
+    lintPending = { session, file };
     return;
   }
 
@@ -138,10 +144,12 @@ export async function runLinter(session, file) {
 
   const errorMapForThisRun = new Map();
   let errorLinesForMinimap = [];
+  let lintedContent = null; // exact text this run checked
 
   try {
     const fileName = Url.basename(file.filename);
     const fileContent = isCM6 ? editor.state.doc.toString() : session.getValue();
+    lintedContent = fileContent;
 
     const project = await prepareProject(file, fileContent, true);
     if (!project) {
@@ -238,6 +246,18 @@ export async function runLinter(session, file) {
       updateLogMap(errorMapForThisRun);
     } else {
       updateLogMap(new Map());
+    }
+    if (lintPending) {
+      const next = lintPending;
+      lintPending = null;
+      // only re-lint if the text really changed since this run started
+      const ed = editorManager.editor;
+      const nowText = ed
+        ? (typeof ed.dispatch === 'function' ? ed.state?.doc?.toString() : next.session?.getValue())
+        : null;
+      if (next.file === editorManager.activeFile && nowText !== null && nowText !== lintedContent) {
+        setTimeout(() => runLinter(next.session, next.file), 0);
+      }
     }
   }
 }

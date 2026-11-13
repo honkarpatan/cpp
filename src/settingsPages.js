@@ -482,6 +482,19 @@ function linterList() {
       ],
     },
     {
+      key: 'lintDelay',
+      text: 'Lint refresh delay',
+      value: val('lintDelay'),
+      info: 'Wait after you stop typing before the live lint starts. Lower = faster feedback, more CPU/battery',
+      select: [
+        [300, '0.3 s (fastest)'],
+        [500, '0.5 s (default)'],
+        [1000, '1 s'],
+        [1500, '1.5 s'],
+        [2000, '2 s (battery saver)'],
+      ],
+    },
+    {
       key: 'showProblemsSideButton',
       text: 'Show Problems side button',
       checkbox: true,
