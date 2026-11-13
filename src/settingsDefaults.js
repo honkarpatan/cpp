@@ -43,6 +43,7 @@ export const defaultSettings = {
   // Linter
   enableLinter: 'both',
   errorTrigger: 'onKeypress',
+  lintDelay: 500, // ms to wait after the last keystroke before live-linting
   showProblemsSideButton: true,
 
   // LSP

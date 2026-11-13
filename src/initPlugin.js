@@ -80,6 +80,12 @@ function checkFileAndSetup() {
     }
 }
 
+/** Debounce (ms) from settings; clamped so a bad value can't freeze or spam the linter. */
+function getLintDelay() {
+    const n = Number(getSettings().lintDelay);
+    return Number.isFinite(n) ? Math.min(5000, Math.max(200, n)) : 500;
+}
+
 function triggerDebouncedLint(source) {
     clearTimeout(lintTimeout);
     if (!currentFile || !/\.(c|cpp|cxx|cc|h|hpp)$/i.test(currentFile.filename)) return;
@@ -105,7 +111,7 @@ function triggerDebouncedLint(source) {
             lastLintedCode = currentCode; 
             await runLinter(currentSession, currentFile); 
         }
-    }, 1000); 
+    }, getLintDelay());
 }
 
 const onEditorChangeText = (sourceEvent) => {
