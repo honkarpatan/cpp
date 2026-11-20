@@ -1,3 +1,9 @@
+
+### Next
+  #### Missing return is an error (C++)
+   - Fixed : Lint never reported "control reaches end of non-void function" (GCC skips it under -fsyntax-only); now compiled with -S and -Werror=return-type
+   - Added : also checks unused class/inline member functions (-fkeep-inline-functions); main() is exempt as in the standard
+   - Added Settings : "Missing return = error (C++)" (on by default, applies to Lint and Run; skipped if your own compiler flags mention return-type)
 ## C/C++ Tools 
 
 ### 2.1.3 

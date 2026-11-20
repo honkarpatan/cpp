@@ -44,6 +44,7 @@ export const defaultSettings = {
   enableLinter: 'both',
   errorTrigger: 'onKeypress',
   lintDelay: 500, // ms to wait after the last keystroke before live-linting
+  missingReturnAsError: true, // C++: 'control reaches end of non-void function' is an error (UB), not a warning
   showProblemsSideButton: true,
 
   // LSP
