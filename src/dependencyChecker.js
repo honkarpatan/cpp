@@ -155,7 +155,38 @@ export async function verifyDependencies(focus = 'all') {
   };
 }
 
+// ---- readiness cache -------------------------------------------------------
+// Live lint calls ensureCDeps() on every run. Without a cache that spawns one proot
+// process per catalog entry (gcc, g++, make, bc, clangd) each time (seconds of delay).
+// Only a *positive* result is cached; install / uninstall invalidate it.
+const DEPS_READY_TTL_MS = 5 * 60 * 1000;
+let depsReadyCache = { key: '', until: 0 };
+let depsReadyInFlight = null; // { key, promise }
+
+export function invalidateDepsCache() {
+  depsReadyCache = { key: '', until: 0 };
+  depsReadyInFlight = null;
+}
+
 export async function areCoreDepsReady(focus) {
+  const f = focus || getActiveLangFocus();
+  const key = f + '|' + [...requiredIdsFor(f === 'all' ? 'all' : f)].sort().join(',');
+  if (depsReadyCache.key === key && Date.now() < depsReadyCache.until) return true;
+  if (depsReadyInFlight && depsReadyInFlight.key === key) return depsReadyInFlight.promise;
+
+  const promise = computeCoreDepsReady(f)
+    .then(ok => {
+      if (ok) depsReadyCache = { key, until: Date.now() + DEPS_READY_TTL_MS };
+      return ok;
+    })
+    .finally(() => {
+      if (depsReadyInFlight && depsReadyInFlight.promise === promise) depsReadyInFlight = null;
+    });
+  depsReadyInFlight = { key, promise };
+  return promise;
+}
+
+async function computeCoreDepsReady(focus) {
   const f = focus || getActiveLangFocus();
   // For readiness of run/lint: C file → gcc; cpp → g++; headers → either
   let checkFocus = f;
@@ -296,6 +327,7 @@ async function runInstallSelected(ids, title) {
     return false;
   }
   installInFlight = true;
+  invalidateDepsCache();
   resetInstallCancel();
   try {
     const ok = await runInstallSteps(title || 'Installing dependencies', [
@@ -311,6 +343,7 @@ async function runInstallSelected(ids, title) {
       installInFlight = false;
       return false;
     }
+    invalidateDepsCache();
     const all = await scanAllDeps();
     const still = ids.filter(id => !all.find(d => d.id === id)?.present);
     if (still.length) {
@@ -341,6 +374,7 @@ async function runUninstallSelected(ids) {
     return false;
   }
   installInFlight = true;
+  invalidateDepsCache();
   resetInstallCancel();
   try {
     const ok = await runInstallSteps('Uninstall dependencies', [
@@ -349,6 +383,7 @@ async function runUninstallSelected(ids) {
         run: () => stepUninstallSelected(ids)
       }
     ]);
+    invalidateDepsCache();
     await markInstalled(false);
     toast(ok ? 'Removed: ' + ids.join(', ') : 'Uninstall finished', 3000);
     installInFlight = false;

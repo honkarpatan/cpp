@@ -27,6 +27,7 @@ const TOOL_ACTIONS = [
   ['format', 'Format document'],
   ['autoImport', 'Auto import headers'],
   ['problems', 'Open Problems'],
+  ['libraries', 'Libraries…'],
   ['deps', 'Dependencies…'],
   ['runTerm', 'Run in terminal'],
   ['runPopup', 'Run · popup'],
@@ -117,14 +118,21 @@ async function handleAction(id) {
     }
     return;
   }
+  if (id === 'libraries') {
+    try {
+      const { openLibraries } = await import('./libraries/index.js');
+      openLibraries();
+    } catch (e) {
+      toast('Libraries: ' + (e?.message || e), 2000);
+    }
+    return;
+  }
   if (id === 'deps') {
     try {
-      const { openDepsPicker } = await import('./depsPicker.js');
-      if (typeof openDepsPicker === 'function') await openDepsPicker();
-      else {
-        const { ensureCDeps } = await import('./dependencyChecker.js');
-        await ensureCDeps({ force: true });
-      }
+      // depsPicker.openDepsPicker() needs scan data (opts.items); the checker scans
+      // first and then fills the picker, so go through it.
+      const { checkDependenciesAction } = await import('./dependencyChecker.js');
+      await checkDependenciesAction();
     } catch (e) {
       toast('Deps: ' + (e?.message || e), 2000);
     }

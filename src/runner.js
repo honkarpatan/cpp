@@ -15,6 +15,7 @@ import {
   buildStdinPayload,
   findInputSites,
 } from './inputChips.js';
+import { detectLibraries, buildFlagsShell } from './libraries/catalog.js';
 import { showInlineRunOutput, clearInlineRunOutput, isErrorOutput } from './inlineRunOutput.js';
 
 /**
@@ -98,10 +99,14 @@ function createRunScript(project, displayPath, {
   script += '  fi\n';
   script += 'done\n';
 
+  // Auto-link installed libraries (sqlite3.h → -lsqlite3 …) from the #includes
+  const libSources = Object.values(fileContents || {}).map((c) => String(c ?? ''));
+  script += buildFlagsShell(detectLibraries(libSources, { localFiles: Object.keys(fileContents || {}) })) + '\n';
+
   if (showCmd) {
-    script += `echo "[cmd] ${compiler} -std=${std} ${extraFlags} -I. ${shellEscape(mainFileName)} $EXTRA -o ${shellEscape(outputExe)} -lm"\n`;
+    script += `echo "[cmd] ${compiler} -std=${std} ${extraFlags} -I. ${shellEscape(mainFileName)} $EXTRA $LIB_CFLAGS -o ${shellEscape(outputExe)} $LIB_LDFLAGS -lm"\n`;
   }
-  script += `${compiler} -std=${std} ${extraFlags} -I. '${shellEscape(mainFileName)}' $EXTRA -o '${shellEscape(outputExe)}' -lm\n`;
+  script += `${compiler} -std=${std} ${extraFlags} -I. '${shellEscape(mainFileName)}' $EXTRA $LIB_CFLAGS -o '${shellEscape(outputExe)}' $LIB_LDFLAGS -lm\n`;
   script += 'COMPILE_CODE=$?\n';
   script += 'if [ "$COMPILE_CODE" -ne 0 ]; then\n';
   script += '  echo -e "\\n\\033[1;31m[compile failed]\\033[0m exit=$COMPILE_CODE"\n';

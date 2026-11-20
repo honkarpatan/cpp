@@ -3,6 +3,7 @@ import plugin from '../plugin.json';
 import { initPlugin, destroyPlugin } from './initPlugin.js';
 import './styles.css';
 import './settings.css';
+import './libraries/libraries.css';
 import { getSettings, settingsList, onSettingsChange } from './settings.js';
 
 if (window.acode) {
