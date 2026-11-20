@@ -495,6 +495,12 @@ function linterList() {
       ],
     },
     {
+      key: 'missingReturnAsError',
+      text: 'Missing return = error (C++)',
+      info: 'A non-void function that can reach its end without return is undefined behavior. Report it as an error in Lint and Run. Slightly slower lint',
+      checkbox: true,
+    },
+    {
       key: 'showProblemsSideButton',
       text: 'Show Problems side button',
       checkbox: true,

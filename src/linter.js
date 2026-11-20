@@ -34,8 +34,17 @@ async function lintInOneShot(projectDir, fileContents, mainFileName, isCpp) {
   const detected = detectLibraries(Object.values(fileContents), { localFiles: Object.keys(fileContents) });
   if (detected.length) parts.push(buildFlagsGroup(detected));
 
+  // GCC only runs the flow analysis behind "control reaches end of non-void function"
+  // when it generates code, never under -fsyntax-only. For C++ (where it is UB) compile to
+  // assembly (-S, discarded) and keep unused inline/class member functions so they are
+  // checked too. A syntax error stops GCC before code generation, so broken code is not slower.
+  const strictReturn = isCpp && getSettings().missingReturnAsError !== false;
+  const modeFlags = strictReturn
+    ? '-S -o /dev/null -fkeep-inline-functions -Werror=return-type'
+    : '-fsyntax-only';
+
   parts.push(
-    `${compiler} ${stdFlag} -fsyntax-only -Wall -Wextra ${detected.length ? '$LIB_CFLAGS ' : ''}'${shellEscape(mainFileName)}' 2>&1 || true`
+    `${compiler} ${stdFlag} ${modeFlags} -Wall -Wextra ${detected.length ? '$LIB_CFLAGS ' : ''}'${shellEscape(mainFileName)}' 2>&1 || true`
   );
 
   const snippet = parts.join(' && ');
@@ -85,11 +94,19 @@ function parseCompilerErrors(errorOutput, tempFileName) {
         row: parseInt(match[2], 10) - 1,
         column: Math.max(0, parseInt(match[3], 10) - 1),
         type: match[4] === 'warning' ? 'warning' : 'error',
-        text: match[5] + missingHeaderHint(match[5])
+        text: friendlyMessage(match[5]) + missingHeaderHint(match[5])
       });
     }
   }
   return annotations;
+}
+
+/** Make the promoted -Werror=return-type message readable. */
+function friendlyMessage(text) {
+  return String(text).replace(
+    /\s*\[-Werror=return-type\]\s*$/,
+    ' — undefined behavior if it runs off the end [return-type]'
+  );
 }
 
 function getCM6Diagnostics(annotations, editor) {

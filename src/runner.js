@@ -35,7 +35,12 @@ function createRunScript(project, displayPath, {
   const std = isCpp
     ? settings.cppStandard || 'gnu++17'
     : settings.cStandard || 'gnu11';
-  const extraFlags = (settings.compilerFlags || '-Wall -Wextra -O2').trim();
+  let extraFlags = (settings.compilerFlags || '-Wall -Wextra -O2').trim();
+  // C++: running off the end of a non-void function is UB → error (unless the user
+  // explicitly manages return-type warnings in their own compiler flags)
+  if (isCpp && settings.missingReturnAsError !== false && !/return-type/.test(extraFlags)) {
+    extraFlags += ' -Werror=return-type -fkeep-inline-functions';
+  }
 
   // Inline / inline-input: never print meta banners (only program stdout)
   const isInline = mode === 'inline' || mode === 'inline-input';
